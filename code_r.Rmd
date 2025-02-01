@@ -1,0 +1,374 @@
+---
+title: "Projet"
+output: pdf_document
+date: "2025-02-01"
+---
+
+## Introduction
+
+Deux intervenants, Annick Haelewyn et Valérie Guillouf, ont proposé une séance découverte de méditation de pleine conscience à 121 sujets. Ces 121 sujets ont ensuite été invités à remplir une grille d'évaluation.
+
+Celle-ci se décompose en trois points : l'évaluation de la séance, la satisfaction et la qualité globale de la séance. Les sujets pouvaient ensuite laisser un commentaire s'ils le souhaitaient.
+
+```{r}
+donnees = read.table("export.csv", header=T, sep=";")
+```
+
+## Qualité globale de la séance
+
+On considère $X_1=~Note~attribuée~pour~la~qualité~globale~de~la~séance$. Il s'agit d'un caractère quantitatif.
+
+```{r}
+# Remplacement des virgules par des points et conversion en numérique
+X1 = as.numeric(gsub(",", ".", donnees$Q10))
+# Vérification des NA
+sum(is.na(X1))
+```
+
+Les sujets ont attribué une note sur 10 pour évaluer la qualité globale de la séance. En regardant les données de plus près, on remarque que 116 sujets sur les 121 ont attribué une note sur cette question soit plus de 95,8% !
+
+Pour la suite, afin que nos 5 données manquantes ne perturbent pas notre analyse, nous allons les supprimer et les remplacer par la moyenne de toutes les notes.
+
+```{r}
+X1[c(6,10,36,40,81)] = mean(X1[-c(6,10,36,40,81)])
+```
+
+On peut afficher un résumé de nos données.
+
+```{r}
+summary(X1)
+```
+
+On obtient alors que :
+
+-   La plus mauvaise note est $7$.
+
+-   La meilleure note est $10$.
+
+-   La moyenne des notes est de $\mu = 9.021$.
+
+-   Le premier quartile est donné par $Q_1=7$, la médiane par $Q_2=9$ et le troisième quartile par $Q_3=10$.
+
+On peut aussi s'intéresser à la variance de la note.
+
+```{r}
+var(X1)
+```
+
+On obtient $0.9167529$. Il s'agit d'un paramètre de dispersion. Il mesure les fluctuations des valeurs de $X_1$ autour de $\mu$.
+
+On peut représenter graphiquement ces données graphiquement à l'aide d'une boîte à moustaches.
+
+```{r}
+boxplot(X1, main="Boîte à moustaches - Qualité globale de la séance", col="deepskyblue4", ylab="Note")
+```
+
+Le bas de la boîte représente $Q_1$, le haut de la boîte représente $Q_3$ et le segment horizontal au sein de la boîte représente la médiane $Q_2$. On retrouve bien les valeurs citées plus précédement.
+
+Le segment horizontal en dessous de la boîte appelé $\textit{moustâche inférieure}$ ; c'est la valeur des données immédiatement supérieures à $Q_1-1.5(Q_3-Q_1)$. Le segment horizontal au dessus de la boîte est appelé $\textit{moustâche supérieure}$ ; c'est la valeur des données immédiatement inférieures à $Q_3+1.5(Q_3-Q_1)$. Eventuellement, des points hors des moustches représentent des valeurs atypiques. Ici, nous n'en avons pas.
+
+$\textbf{De quantitatif à qualitatif :}$ Lorsqu'un caractère quantitatif a peu de valeurs différentes, on peut éventuellement l'assimiler à un caractère qualitatif ordinal en considérant ses valeurs comme des modalités. Ici, puisque les notes obtenues se répètent souvent, nous allons tenter de transformer notre caractère $X_1$ quantitatif en un caractère qualitatif ordinal a $7$ modalités : $\textit{"non noté"}$, $\textit{"7"}$, $\textit{"8"}$, $\textit{"8,5"}$, $\textit{"9,5"}$, $\textit{"9,9"}$, $\textit{"10"}$.
+
+```{r}
+X1 = gsub(" ", "non noté", donnees$Q10)
+freq = table(X1)
+freq
+```
+
+Ainsi, nous obtenons :
+
+-   $5$ sujets n'ont pas attribué de note,
+
+-   $45$ sujets ont donné la note de $10/10$,
+
+-   $1$ sujet a donné la note de $9,9/10$,
+
+-   $4$ sujets ont donné la note de $9,5/10$,
+
+-   $29$ sujets ont donné la note de $9/10$,
+
+-   $1$ sujet a donné la note de $8,5/10$,
+
+-   $27$ sujets ont donné la note de $8/10$,
+
+-   $9$ sujets ont donné la note de $7/10$.
+
+On peut également représenter ça à l'aide d'un graphique circulaire ou d'un histogramme.
+
+```{r}
+library(plotrix)
+# Création du camembert
+pie(freq, 
+    main = "Répartition des notes (en %)", 
+    col = rainbow(length(freq)), 
+    labels = paste(names(freq), "(", round(prop.table(freq) * 100, 1), "%)", sep =" "))
+
+barplot(freq, 
+        main = "Répartition des notes (en %)",
+        col = "deepskyblue4", 
+        border = "blue"
+)
+```
+
+$\textbf{A retenir :}$
+
+-   $37.2$% des sujets ont attribué la note de $10$ !
+
+-   Plus de $65$% des sujets ont attribués minimum $9$.
+
+-   Plus de $88$% des sujets ont attribués minimum $8$.
+
+-   Seul $4$% des sujets n'ont pas attribués de note.
+
+$\textbf{Une séance réussie ?}$ Les résultats précédement évoqués nous amènent à penser que cette séance a été une grande réussite.
+
+Pour approfondir notre analyse, nous allons dans la suite nous intéresser aux parties $\textbf{Evaluation de la séance}$, $\textbf{Satisfaction}$ et $\textbf{Commentaire}$ du questionnaire.
+
+## Commentaires
+
+En fin de questionnaire, les sujets avaient la possibilité d'écrire un commentaire. Nous les avons lus et triés. On considère les variables binaires suivantes :
+
+-   $X_2~=~"Vide"$ : 1 si le sujet n'a pas pris le temps de laisser un commentaire, 0 sinon.
+
+-   $X_3~=~"Positif"$ : 1 si le sujet a mentionné des choses positives, 0 sinon.
+
+-   $X_4~=~"Négatif"$ : 1 si le sujet a mentionné des choses négatives, 0 sinon.
+
+-   $X_5~=~"Merci"$ : 1 si le sujet a mentionné des remerciements, 0 sinon.
+
+-   $X_6~=~"Inconfort"$ : 1 si le sujet a mentionné de l'inconfort (lieu bruyant, chaise inconfortable, volume sonore trop faible ...), 0 sinon.
+
+-   $X_7~=~"Renouvellement"$ : 1 si le sujet a mentionné son envie de réitérer l'expérience, 0 sinon.
+
+-   $X_8~=~"Problème~technique"$ : 1 si le sujet a mentionné des problèmes techniques ayant perturbés la séance, 0 sinon.
+
+-   $X_9~=~"Durée~trop~courte"$ : 1 si le sujet a mentionné la durée trop courte de la séance, 0 sinon.
+
+-   $X_{10}~=~"Pratique"$ : 1 si le sujet a mentionné son regret de ne pas avoir plus pratique, 0 sinon.
+
+On considèrera également la variable $X_{11}~=~"Autre"$ qu'on traîtera plus tard.
+
+A titre d'exemple, nous allons considérer le commentaire du sujet $106$ :
+
+$$\textit{"J'ai globalement apprécié et je souhaite voir ce type de séance perdurer. Cependant, je pensais pratiquer plus. Merci beaucoup !"}$$
+
+Pour ce commentaire, nous avons : $X_2=0, X_3=1, X_4=0, X_5=1, X_6=0, X_7=1, X_8=0, X_9=0,X_{10}=1$
+
+Ainsi, un commentaire peut tout à fait avoir la valeur $"1"$ sur plusieurs variables.
+
+On peut s'intéresser au nombre de commentaire pour chacune de nos variables.
+
+```{r}
+# Etiquettage des variables binaires
+donnees[, c(22:30)] <- lapply(donnees[, c(22:30)], as.factor)
+Commentaire = donnees[,c(22:30)]
+colnames(Commentaire) = c("Vide", "Positif", "Négatif", "Merci", "Inconfort", "Renouvellement", "Problème Technique", "Durée trop courte", "Pratique")
+
+# Comptage du nombre de "1" pour chaque variable dans Commentaire
+nb1 <- sapply(Commentaire, function(x) sum(x == "1"))
+
+# Affichage des résultats pour vérifier
+print(nb1)
+```
+
+Ainsi :
+
+-   $44$ ($36,36$%) commentaires sont vides.
+
+-   $44$ ($36,36$%) commentaires mentionnent quelque chose de positif.
+
+-   $27$ ($22,31$%) commentaires mentionnent l'envie de réitérer l'expérience.
+
+-   $21$ ($17,36$%) commentaires mentionnent des remerciements.
+
+-   $10$ ($8,26$%) commentaires mentionnent une durée trop courte.
+
+-   $9$ ($7,43$%) commentaires mentionnent de l'inconfort.
+
+-   $4$ ($4,13$%) commentaires mentionnent le regret de ne pas avoir plus pratiqué.
+
+-   $2$ ($1,6$%) commentaires mentionnent des problèmes techniques.
+
+-   $1$ ($0,8$%) commentaire mentionnent quelque chose de négatif.
+
+Pour la suite, nous allons considérer $\textbf{uniquement}$ les sujets ayant laissé un commentaire. On exclut donc les commentaires vides.
+
+```{r}
+CommentaireNonVide = donnees[,c(23:30)]
+colnames(CommentaireNonVide) = c("Positif","Négatif","Merci","Confort","Renouvellement", "Problème Technique","Durée trop courte","Pratique")
+```
+
+```{r}
+# Calcul des pourcentages de "1"
+pourcentages <- sapply(CommentaireNonVide, function(x) sum(x == "1") / (length(x)-44) * 100)
+# Affichage des résultats pour vérifier
+print(pourcentages)
+```
+
+On obtient alors :
+
+-   $57.14$% des commentaires mentionnent quelque chose de positif.
+
+-   $35.06$% des commentaires mentionnent l'envie de réitérer l'expérience.
+
+-   $27.27$% des commentaires mentionnent des remerciements.
+
+-   $12.98$% des commentaires mentionnent une durée trop courte.
+
+-   $11.68$% des commentaires mentionnent de l'inconfort.
+
+-   $5.19$% des commentaires mentionnent le regret de ne pas avoir plus pratiquer.
+
+-   $2.59$% des commentaires mentionnent des problèmes techniques.
+
+-   $1.29$% des commentaire mentionnent quelque chose de négatif.
+
+```{r}
+barplot(pourcentages, 
+        main = "Pourcentage commentaires par catégorie", 
+        xlab = "Variables", 
+        ylab = "Pourcentage de commentaires", 
+        col = "deepskyblue4", 
+        border = "blue", 
+        las = 2, # las = 2 pour rotation des noms des variables
+        ylim = c(0, 100)) # Limites de l'axe Y entre 0 et 100
+```
+
+$\textbf{A retenir :}$
+
+-   Plus d'un sujet sur deux ayant laissé un commentaire y a écrit quelque chose de positif !
+
+-   Plus d'un tier des sujets ayant laissé un commentaire ont mentionné leur envie de pratiquer à nouveau !
+
+-   Plus d'un quart des sujets ayant laissé un commentaire ont mentionné des remerciements !
+
+On considère maintenant la variable $X_{11}~=~"Autre"$ : 1 si le sujet a mentionné autre chose, 0 sinon. Nous en comptons $5$, nous pensons que de part leur "originalité" et leur nombre faible, ils sont à étudier au cas par cas. Les voici :
+
+Sujet :$\textit{"Peut-être un rappel le jour même !! Utiliser la boule de yoga derrière ? Je sais pas. Très sympathique !"}$
+
+Sujet : $\textit{"Peut-être plus de variété, de la musique, un autre point de focus ou d'autres paroles pour nous guider.}$ $\textit{Les deux méditations étaient très similaires."}$
+
+Sujet : $\textit{"Absence du gong durant la 2nd session, m'a moins permis de me recentrer/revenir."}$
+
+Sujet : $\textit{"Je préfèrerais pratiquer à midi pour éviter l'endormissement."}$
+
+Sujet : $\textit{"Coussin pour autre position, placement autre que devant le miroir"}$
+
+## Evaluation de la séance et Satisfaction
+
+En fin de séance, les sujets étaient invités à attribuer des notes sur l'évaluation de la séance et leur satisfaction.
+
+Pour la partie $\textit{"évaluation de la séance"}$, nous avons 7 questions :
+
+-   Organisation et déroulement de la séance
+
+-   Composition du groupe (nombre de participant, niveaux homogènes)
+
+-   Adéquation des moyens matériels mis à disposition
+
+-   Clarté du contenu
+
+-   Animation de la séance par les intervenants
+
+-   Progression de la séance (durée, rythme, alternance théorie/pratique)
+
+Pour la partie $\textit{"satisfaction"}$, nous avons 2 questions :
+
+-   La séance a-t-elle répondu à vos attentes initiales ?
+
+-   Recommanderiez-vous cette séance à une personne exerçant le même métier que vous ?
+
+Le codage utilisé pour les 7 premiers est le suivant : $\textit{1 = insatisfaisant}$, $\textit{2 = peu satisfaisant}$, $\textit{3 = satisfaisant}$, $\textit{4 = très satisfaisant}$.
+
+Celui utilisé pour les deux suivants est : $\textit{1 = non, pas du tout}$, $\textit{2 = non, pas vraiment}$, $\textit{3 = oui, en partie}$, $\textit{4 = oui, tout à fait}$.
+
+```{r}
+donnees[, c(2,4,6,8,10,12,14,16,18)] = lapply(donnees[, c(2,4,6,8,10,12,14,16,18)], as.character)
+```
+
+```{r}
+Y = donnees[ ,c(2,4,6,8,10,12,14,16,18)]
+# Remplacer les valeurs manquantes (NA) par "Non noté"
+Y[is.na(Y)] = "Non noté"
+# Calcul des fréquences pour chaque question
+categories = c("1", "2", "3", "4", "Non noté")
+freq = lapply(Y, function(x) table(factor(x, levels = categories)))
+```
+
+```{r}
+# Sélectionner les colonnes d'intérêt
+Y1 <- donnees[, c(2,4,6,8,10,12,14,16,18)]
+
+# Remplacer les valeurs manquantes (NA) par "Non noté"
+Y1[is.na(Y1)] <- "Non noté"
+
+# Créer une table de fréquences pour chaque colonne
+freq_list <- lapply(Y1, function(col) table(factor(col, levels = categories)))
+
+# Transformer la liste en une matrice de fréquences
+freq_matrix <- do.call(cbind, freq_list)
+
+# Transformer en pourcentages colonne par colonne
+freq_percent <- prop.table(freq_matrix, 2) * 100
+
+# Définir les couleurs
+couleurs <- c("lightblue", "lightgreen", "orange", "pink", "gray")
+
+# Diagramme en barres empilées
+barplot(freq_percent, beside = FALSE, main = "Evaluation de la séance",
+        xlab = "Colonnes de données", ylab = "Pourcentages (%)",
+        col = couleurs, border = "black")
+```
+
+Pour rappel, les questions sont les suivantes :
+
+-   Q1 : Organisation et déroulement de la séance
+
+-   Q2 : Composition du groupe
+
+-   Q3 : Adéquation des moyens matériels mis à disposition
+
+-   Q4 : Conformité de la séance dispensée au programme
+
+-   Q5 : Clarté du contenu
+
+-   Q6 : Animation de la séance par les intervenants
+
+-   Q7 : Progression de la séance
+
+-   Q8 : La séance a-t-elle répondu à vos attentes initiales ?
+
+-   Q9 : Recommanderiez-vous cette séance ?
+
+$\textbf{ACM (Analyse des Correspondances Multiples) :}$
+
+```{r}
+donnees[, c(2,4,6,8,10,12,14,16,18)] = lapply(donnees[, c(2,4,6,8,10,12,14,16,18)], as.character)
+note = donnees[, c(2,4,6,8,10,12,14,16,18)]
+# Remplacer les valeurs manquantes (NA) par "Non noté"
+note[is.na(note)] = "Non noté"
+```
+
+```{r}
+#install.packages("FactoMineR")
+#install.packages("factoextra")
+library(FactoMineR)
+library(factoextra)
+res.mca <- MCA(note, graph = TRUE)
+```
+
+```{r}
+res.mca$eig
+```
+
+```{r}
+res.mca$call
+```
+
+```{r}
+res.mca$var
+```
+
+```{r}
+fviz_screeplot(res.mca, addlabels = TRUE, ylim = c(0, 20), main="Eboulis des valeurs propres") 
+```
